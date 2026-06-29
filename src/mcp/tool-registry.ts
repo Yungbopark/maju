@@ -14,13 +14,20 @@ export class ToolRegistry {
       {
         title: 'Get Maju Status',
         description:
-          'Returns current Maju server status and basic project information.',
+          'Returns current Maju(마주) server status and basic project information.',
         inputSchema: {},
         outputSchema: {
           status: z.literal('ok'),
           service: z.literal('maju'),
           description: z.string(),
           version: z.string(),
+        },
+        annotations: {
+          title: 'Get Maju Status',
+          readOnlyHint: true,
+          destructiveHint: false,
+          openWorldHint: false,
+          idempotentHint: true,
         },
       },
       async () => {
