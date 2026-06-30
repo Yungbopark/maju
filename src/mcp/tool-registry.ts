@@ -6,8 +6,17 @@ import {
   GET_MAJU_STATUS_TOOL_NAME,
   getMajuStatus,
 } from './tools/get-maju-status.tool';
+import { CONTINUE_CONVERSATION_TOOL_NAME } from './tools/continue-conversation.tool';
 import { START_CONVERSATION_TOOL_NAME } from './tools/start-conversation.tool';
 import { traceStartConversationInvocation } from './tool-invocation-trace';
+
+const continueConversationInputSchema = z
+  .object({
+    userMessage: z
+      .string()
+      .describe("The user's latest message in the conversation."),
+  })
+  .strict();
 
 @Injectable()
 export class ToolRegistry {
@@ -53,7 +62,7 @@ export class ToolRegistry {
     server.registerTool(
       START_CONVERSATION_TOOL_NAME,
       {
-        title: 'Start Maju Conversation',
+        title: 'Start Conversation',
         description:
           'Starts the first Maju(마주) conversation with a daily check-in opening.',
         inputSchema: {},
@@ -64,7 +73,7 @@ export class ToolRegistry {
           nextAction: z.literal('WAIT_USER_RESPONSE'),
         },
         annotations: {
-          title: 'Start Maju Conversation',
+          title: 'Start Conversation',
           readOnlyHint: true,
           destructiveHint: false,
           openWorldHint: false,
@@ -82,6 +91,48 @@ export class ToolRegistry {
         });
 
         const conversation = this.conversationService.startConversation();
+
+        return {
+          structuredContent: conversation,
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(conversation),
+            },
+          ],
+        };
+      },
+    );
+
+    server.registerTool(
+      CONTINUE_CONVERSATION_TOOL_NAME,
+      {
+        title: 'Continue Conversation',
+        description:
+          "Continues a Maju(마주) conversation using the user's latest message.",
+        inputSchema: continueConversationInputSchema,
+        outputSchema: {
+          assistantReply: z.string(),
+          conversationIntent: z.enum([
+            'MEAL_FOLLOW_UP',
+            'MEAL_CARE',
+            'DAILY_CHECK_IN',
+          ]),
+          conversationState: z.enum(['FOLLOW_UP', 'CARE_SUGGESTION']),
+          nextAction: z.literal('WAIT_USER_RESPONSE'),
+        },
+        annotations: {
+          title: 'Continue Conversation',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async (args) => {
+        const { userMessage } = continueConversationInputSchema.parse(args);
+        const conversation =
+          this.conversationService.continueConversation(userMessage);
 
         return {
           structuredContent: conversation,

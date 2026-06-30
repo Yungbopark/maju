@@ -49,8 +49,8 @@
         }
       },
       {
-        "name": "startMajuConversation",
-        "title": "Start Maju Conversation",
+        "name": "startConversation",
+        "title": "Start Conversation",
         "description": "Starts the first Maju(마주) conversation with a daily check-in opening.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
@@ -58,7 +58,7 @@
           "properties": {}
         },
         "annotations": {
-          "title": "Start Maju Conversation",
+          "title": "Start Conversation",
           "readOnlyHint": true,
           "destructiveHint": false,
           "openWorldHint": false,
@@ -89,6 +89,70 @@
           },
           "required": [
             "assistantOpening",
+            "conversationIntent",
+            "conversationState",
+            "nextAction"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "continueConversation",
+        "title": "Continue Conversation",
+        "description": "Continues a Maju(마주) conversation using the user's latest message.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "userMessage": {
+              "type": "string",
+              "description": "The user's latest message in the conversation."
+            }
+          },
+          "required": [
+            "userMessage"
+          ],
+          "additionalProperties": false
+        },
+        "annotations": {
+          "title": "Continue Conversation",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        },
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "assistantReply": {
+              "type": "string"
+            },
+            "conversationIntent": {
+              "type": "string",
+              "enum": [
+                "MEAL_FOLLOW_UP",
+                "MEAL_CARE",
+                "DAILY_CHECK_IN"
+              ]
+            },
+            "conversationState": {
+              "type": "string",
+              "enum": [
+                "FOLLOW_UP",
+                "CARE_SUGGESTION"
+              ]
+            },
+            "nextAction": {
+              "type": "string",
+              "const": "WAIT_USER_RESPONSE"
+            }
+          },
+          "required": [
+            "assistantReply",
             "conversationIntent",
             "conversationState",
             "nextAction"
