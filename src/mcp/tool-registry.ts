@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ConversationService } from '../conversation/conversation.service';
+import { getOpenAISubjectFromRequest } from './request-subject';
 import { inspectRequestContext } from './request-context-inspection';
 import {
   GET_MAJU_STATUS_TOOL_NAME,
   getMajuStatus,
 } from './tools/get-maju-status.tool';
 import { CONTINUE_CONVERSATION_TOOL_NAME } from './tools/continue-conversation.tool';
+import { GET_CONVERSATION_CONTEXT_TOOL_NAME } from './tools/get-conversation-context.tool';
 import { GET_REQUEST_CONTEXT_TOOL_NAME } from './tools/get-request-context.tool';
 import { START_CONVERSATION_TOOL_NAME } from './tools/start-conversation.tool';
 import { traceStartConversationInvocation } from './tool-invocation-trace';
@@ -92,7 +94,9 @@ export class ToolRegistry {
           extra,
         });
 
-        const conversation = this.conversationService.startConversation();
+        const conversation = this.conversationService.startConversation(
+          getOpenAISubjectFromRequest(),
+        );
 
         return {
           structuredContent: conversation,
@@ -133,8 +137,10 @@ export class ToolRegistry {
       },
       async (args) => {
         const { userMessage } = continueConversationInputSchema.parse(args);
-        const conversation =
-          this.conversationService.continueConversation(userMessage);
+        const conversation = this.conversationService.continueConversation(
+          userMessage,
+          getOpenAISubjectFromRequest(),
+        );
 
         return {
           structuredContent: conversation,
@@ -142,6 +148,49 @@ export class ToolRegistry {
             {
               type: 'text',
               text: JSON.stringify(conversation),
+            },
+          ],
+        };
+      },
+    );
+
+    server.registerTool(
+      GET_CONVERSATION_CONTEXT_TOOL_NAME,
+      {
+        title: 'Get Conversation Context',
+        description:
+          'Returns the temporary in-memory conversation context for the current x-openai-subject.',
+        inputSchema: {},
+        outputSchema: {
+          subject: z.string().nullable(),
+          conversationExists: z.boolean(),
+          conversationState: z
+            .enum(['OPENING', 'FOLLOW_UP', 'CARE_SUGGESTION'])
+            .nullable(),
+          lastUserMessage: z.string().nullable(),
+          lastAssistantReply: z.string().nullable(),
+          updatedAt: z.string().nullable(),
+        },
+        annotations: {
+          title: 'Get Conversation Context',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async () => {
+        const conversationContext =
+          this.conversationService.getConversationContext(
+            getOpenAISubjectFromRequest(),
+          );
+
+        return {
+          structuredContent: conversationContext,
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(conversationContext),
             },
           ],
         };
