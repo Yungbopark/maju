@@ -8,6 +8,7 @@
     "build": "nest build",
     "dev:playground": "npm run build && node dist/development/playground/conversation-playground.js",
     "playground": "npm run dev:playground",
+    "playground:web": "npm run build && echo 'Maju web playground: http://localhost:3100/development/playground' && ENABLE_DEVELOPMENT_PLAYGROUND=true PORT=3100 node dist/main",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main"

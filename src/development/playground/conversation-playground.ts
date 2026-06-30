@@ -117,7 +117,17 @@ async function main(): Promise<void> {
 
   try {
     while (true) {
-      const userMessage = await rl.question('\nYou: ');
+      let userMessage: string;
+
+      try {
+        userMessage = await rl.question('\nYou: ');
+      } catch (error) {
+        if (error instanceof Error && error.message === 'readline was closed') {
+          break;
+        }
+
+        throw error;
+      }
 
       if (userMessage.trim() === '/exit') {
         break;
