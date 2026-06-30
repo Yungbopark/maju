@@ -8,6 +8,7 @@ import {
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { Request, Response } from 'express';
 import { McpServerFactory } from './mcp-server.factory';
+import { mcpRequestContext } from './tool-invocation-trace';
 
 @Controller('mcp')
 export class McpController {
@@ -29,8 +30,17 @@ export class McpController {
     });
 
     try {
-      await server.connect(transport);
-      await transport.handleRequest(request, response, request.body);
+      await mcpRequestContext.run(
+        {
+          method: request.method,
+          headers: request.headers,
+          body: request.body,
+        },
+        async () => {
+          await server.connect(transport);
+          await transport.handleRequest(request, response, request.body);
+        },
+      );
     } catch (error) {
       if (!response.headersSent) {
         response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

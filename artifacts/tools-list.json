@@ -1,0 +1,103 @@
+{
+  "result": {
+    "tools": [
+      {
+        "name": "getMajuStatus",
+        "title": "Get Maju Status",
+        "description": "Returns current Maju(마주) server status and basic project information.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "annotations": {
+          "title": "Get Maju Status",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        },
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "ok"
+            },
+            "service": {
+              "type": "string",
+              "const": "maju"
+            },
+            "description": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "service",
+            "description",
+            "version"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "startConversation",
+        "title": "Start Conversation",
+        "description": "Starts the first Maju(마주) conversation with a daily check-in opening.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "annotations": {
+          "title": "Start Conversation",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "openWorldHint": false,
+          "idempotentHint": true
+        },
+        "execution": {
+          "taskSupport": "forbidden"
+        },
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "assistantOpening": {
+              "type": "string"
+            },
+            "conversationIntent": {
+              "type": "string",
+              "const": "DAILY_CHECK_IN"
+            },
+            "conversationState": {
+              "type": "string",
+              "const": "OPENING"
+            },
+            "nextAction": {
+              "type": "string",
+              "const": "WAIT_USER_RESPONSE"
+            }
+          },
+          "required": [
+            "assistantOpening",
+            "conversationIntent",
+            "conversationState",
+            "nextAction"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  },
+  "jsonrpc": "2.0",
+  "id": 2
+}

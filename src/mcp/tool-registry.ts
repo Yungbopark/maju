@@ -7,6 +7,7 @@ import {
   getMajuStatus,
 } from './tools/get-maju-status.tool';
 import { START_CONVERSATION_TOOL_NAME } from './tools/start-conversation.tool';
+import { traceStartConversationInvocation } from './tool-invocation-trace';
 
 @Injectable()
 export class ToolRegistry {
@@ -70,7 +71,16 @@ export class ToolRegistry {
           idempotentHint: true,
         },
       },
-      async () => {
+      async (args, extra) => {
+        await traceStartConversationInvocation({
+          toolName: START_CONVERSATION_TOOL_NAME,
+          timestamp: new Date().toISOString(),
+          requestId: extra.requestId,
+          sessionId: extra.sessionId,
+          arguments: args,
+          extra,
+        });
+
         const conversation = this.conversationService.startConversation();
 
         return {
