@@ -1,1 +1,1 @@
-export const START_CONVERSATION_TOOL_NAME = 'startConversation';
+export const START_CONVERSATION_TOOL_NAME = 'startMajuConversation';

@@ -49,8 +49,8 @@
         }
       },
       {
-        "name": "startConversation",
-        "title": "Start Conversation",
+        "name": "startMajuConversation",
+        "title": "Start Maju Conversation",
         "description": "Starts the first Maju(마주) conversation with a daily check-in opening.",
         "inputSchema": {
           "$schema": "http://json-schema.org/draft-07/schema#",
@@ -58,7 +58,7 @@
           "properties": {}
         },
         "annotations": {
-          "title": "Start Conversation",
+          "title": "Start Maju Conversation",
           "readOnlyHint": true,
           "destructiveHint": false,
           "openWorldHint": false,
@@ -99,5 +99,5 @@
     ]
   },
   "jsonrpc": "2.0",
-  "id": 2
+  "id": "list-003"
 }

@@ -80,7 +80,7 @@ function getMcpHeaders(headers: MajuRequestHeaders): MajuRequestHeaders {
   );
 }
 
-function extractArgumentsFromBody(body: unknown): unknown {
+function extractArgumentsFromBody(body: unknown, toolName: string): unknown {
   if (!body || typeof body !== 'object') {
     return undefined;
   }
@@ -92,7 +92,7 @@ function extractArgumentsFromBody(body: unknown): unknown {
 
   if (
     maybeRequest.method === 'tools/call' &&
-    maybeRequest.params?.name === 'startConversation'
+    maybeRequest.params?.name === toolName
   ) {
     return maybeRequest.params.arguments ?? {};
   }
@@ -112,7 +112,9 @@ export async function traceStartConversationInvocation(
   const mcpSessionHeader = getHeader(rawHeaders, 'mcp-session-id');
   const mcpHeaders = maskHeaders(getMcpHeaders(rawHeaders));
   const args =
-    input.arguments ?? extractArgumentsFromBody(requestContext?.body) ?? {};
+    input.arguments ??
+    extractArgumentsFromBody(requestContext?.body, input.toolName) ??
+    {};
 
   const trace = {
     timestamp: input.timestamp,

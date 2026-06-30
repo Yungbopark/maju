@@ -53,7 +53,7 @@ export class ToolRegistry {
     server.registerTool(
       START_CONVERSATION_TOOL_NAME,
       {
-        title: 'Start Conversation',
+        title: 'Start Maju Conversation',
         description:
           'Starts the first Maju(마주) conversation with a daily check-in opening.',
         inputSchema: {},
@@ -64,7 +64,7 @@ export class ToolRegistry {
           nextAction: z.literal('WAIT_USER_RESPONSE'),
         },
         annotations: {
-          title: 'Start Conversation',
+          title: 'Start Maju Conversation',
           readOnlyHint: true,
           destructiveHint: false,
           openWorldHint: false,
