@@ -33,6 +33,13 @@ export class McpController {
       await mcpRequestContext.run(
         {
           method: request.method,
+          url: request.url,
+          originalUrl: request.originalUrl,
+          path: request.path,
+          protocol: request.protocol,
+          ip: request.ip,
+          ips: request.ips,
+          hostname: request.hostname,
           headers: request.headers,
           body: request.body,
         },

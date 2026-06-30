@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ConversationService } from '../conversation/conversation.service';
+import { inspectRequestContext } from './request-context-inspection';
 import {
   GET_MAJU_STATUS_TOOL_NAME,
   getMajuStatus,
 } from './tools/get-maju-status.tool';
 import { CONTINUE_CONVERSATION_TOOL_NAME } from './tools/continue-conversation.tool';
+import { GET_REQUEST_CONTEXT_TOOL_NAME } from './tools/get-request-context.tool';
 import { START_CONVERSATION_TOOL_NAME } from './tools/start-conversation.tool';
 import { traceStartConversationInvocation } from './tool-invocation-trace';
 
@@ -140,6 +142,43 @@ export class ToolRegistry {
             {
               type: 'text',
               text: JSON.stringify(conversation),
+            },
+          ],
+        };
+      },
+    );
+
+    server.registerTool(
+      GET_REQUEST_CONTEXT_TOOL_NAME,
+      {
+        title: 'Get Request Context',
+        description:
+          'Inspects the request context delivered to the Maju(마주) MCP server.',
+        inputSchema: {},
+        outputSchema: {
+          headers: z.record(z.string(), z.unknown()),
+          request: z.record(z.string(), z.unknown()),
+          session: z.record(z.string(), z.unknown()),
+          user: z.record(z.string(), z.unknown()),
+          environment: z.record(z.string(), z.unknown()),
+        },
+        annotations: {
+          title: 'Get Request Context',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async (_args, extra) => {
+        const requestContext = await inspectRequestContext(extra);
+
+        return {
+          structuredContent: requestContext,
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(requestContext),
             },
           ],
         };

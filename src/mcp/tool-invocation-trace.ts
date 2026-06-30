@@ -6,6 +6,13 @@ export type MajuRequestHeaders = Record<string, string | string[] | undefined>;
 
 export type MajuRequestContext = {
   method?: string;
+  url?: string;
+  originalUrl?: string;
+  path?: string;
+  protocol?: string;
+  ip?: string;
+  ips?: string[];
+  hostname?: string;
   headers: MajuRequestHeaders;
   body?: unknown;
 };
