@@ -3,10 +3,20 @@ import { Injectable } from '@nestjs/common';
 export interface StartConversationResult {
   [key: string]: unknown;
   assistantOpening: string;
+  openingScenario: {
+    id: string;
+    category: string;
+  };
   conversationIntent: 'DAILY_CHECK_IN';
   conversationState: 'OPENING';
   nextAction: 'WAIT_USER_RESPONSE';
 }
+
+export type OpeningScenarioInput = {
+  id: string;
+  category: string;
+  openingMessage: string;
+};
 
 export interface ContinueConversationResult {
   [key: string]: unknown;
@@ -41,9 +51,18 @@ export interface ConversationContextResult {
 export class ConversationService {
   private readonly conversationContexts = new Map<string, ConversationContext>();
 
-  startConversation(openAISubject?: string | null): StartConversationResult {
+  startConversation(
+    openAISubject?: string | null,
+    openingScenario?: OpeningScenarioInput | null,
+  ): StartConversationResult {
     const conversation: StartConversationResult = {
-      assistantOpening: '안녕하세요. 😊 오늘 비가 오는데 점심은 드셨나요?',
+      assistantOpening:
+        openingScenario?.openingMessage ??
+        '안녕하세요. 😊 오늘 비가 오는데 점심은 드셨나요?',
+      openingScenario: {
+        id: openingScenario?.id ?? 'FALLBACK_DAILY_CHECK',
+        category: openingScenario?.category ?? 'DailyLife',
+      },
       conversationIntent: 'DAILY_CHECK_IN',
       conversationState: 'OPENING',
       nextAction: 'WAIT_USER_RESPONSE',

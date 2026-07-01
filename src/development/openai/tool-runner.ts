@@ -1,4 +1,7 @@
-import { ConversationService } from '../../conversation/conversation.service';
+import {
+  ConversationService,
+  OpeningScenarioInput,
+} from '../../conversation/conversation.service';
 import { inspectRequestContext } from '../../mcp/request-context-inspection';
 import { getMajuStatus } from '../../mcp/tools/get-maju-status.tool';
 
@@ -14,6 +17,11 @@ const DEVELOPMENT_SUBJECT = 'local-playground-subject';
 
 export class DevelopmentToolRunner {
   private readonly conversationService = new ConversationService();
+  private openingScenario: OpeningScenarioInput | null = null;
+
+  setOpeningScenario(openingScenario: OpeningScenarioInput): void {
+    this.openingScenario = openingScenario;
+  }
 
   async runTool(
     toolName: string,
@@ -40,7 +48,10 @@ export class DevelopmentToolRunner {
         return getMajuStatus();
 
       case 'startConversation':
-        return this.conversationService.startConversation(DEVELOPMENT_SUBJECT);
+        return this.conversationService.startConversation(
+          DEVELOPMENT_SUBJECT,
+          this.openingScenario,
+        );
 
       case 'continueConversation':
         return this.conversationService.continueConversation(

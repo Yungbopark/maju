@@ -323,8 +323,16 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             <pre id="sessionId">-</pre>
           </div>
           <div class="field">
-            <div class="label">OpeningScenario</div>
+            <div class="label">OpeningScenario Id</div>
             <pre id="openingScenario">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">OpeningScenario Category</div>
+            <pre id="openingScenarioCategory">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">Assistant Opening</div>
+            <pre id="assistantOpening">-</pre>
           </div>
           <div class="field">
             <div class="label">Current Turn</div>
@@ -432,6 +440,8 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       const sessionFields = {
         sessionId: document.querySelector('#sessionId'),
         openingScenario: document.querySelector('#openingScenario'),
+        openingScenarioCategory: document.querySelector('#openingScenarioCategory'),
+        assistantOpening: document.querySelector('#assistantOpening'),
         currentTurn: document.querySelector('#currentTurn'),
         startedAt: document.querySelector('#startedAt'),
         turnCount: document.querySelector('#turnCount'),
@@ -506,7 +516,12 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
         sessionStatus.textContent = session.EndedAt ? 'Ended' : 'Active';
         sessionFields.sessionId.textContent = session.SessionId ?? '-';
-        sessionFields.openingScenario.textContent = session.OpeningScenario ?? '-';
+        sessionFields.openingScenario.textContent =
+          session.OpeningScenario?.id ?? '-';
+        sessionFields.openingScenarioCategory.textContent =
+          session.OpeningScenario?.category ?? '-';
+        sessionFields.assistantOpening.textContent =
+          session.AssistantOpening ?? '-';
         sessionFields.currentTurn.textContent = String(session.CurrentTurn ?? 0);
         sessionFields.startedAt.textContent = session.StartedAt ?? '-';
         sessionFields.turnCount.textContent = String(session.TurnCount ?? 0);

@@ -4,17 +4,38 @@ import { dirname, join } from 'node:path';
 import { ConversationAnalysis } from '../openai/conversation-analyzer';
 
 export const openingScenarios = [
-  'Meal',
-  'Sleep',
-  'Exercise',
-  'Weekend',
-  'Hobby',
-  'Weather',
-  'Work',
-  'Emotion',
+  {
+    id: 'MEAL_CHECK',
+    category: 'Meal',
+    openingMessage: '안녕하세요. 😊 오늘 식사는 잘 챙기셨나요?',
+  },
+  {
+    id: 'SLEEP_CHECK',
+    category: 'Health',
+    openingMessage: '안녕하세요. 어젯밤은 편하게 주무셨나요?',
+  },
+  {
+    id: 'MOOD_CHECK',
+    category: 'Emotion',
+    openingMessage: '안녕하세요. 오늘 기분은 어떠세요?',
+  },
+  {
+    id: 'WORK_CHECK',
+    category: 'Work',
+    openingMessage: '오늘 하루 일은 어떠셨어요?',
+  },
+  {
+    id: 'HOBBY_CHECK',
+    category: 'Hobby',
+    openingMessage: '요즘 즐겁게 하고 있는 일이 있으세요?',
+  },
 ] as const;
 
-export type OpeningScenario = (typeof openingScenarios)[number];
+export type OpeningScenario = {
+  id: (typeof openingScenarios)[number]['id'];
+  category: (typeof openingScenarios)[number]['category'];
+  openingMessage: string;
+};
 
 export type SessionMessage = {
   id: string;
@@ -49,6 +70,7 @@ export type ConversationSessionSnapshot = {
   StartedAt: string;
   EndedAt: string | null;
   OpeningScenario: OpeningScenario;
+  AssistantOpening: string;
   CurrentTurn: number;
   TurnCount: number;
   ConversationState: unknown;
@@ -62,6 +84,7 @@ export type ConversationSessionReport = {
     StartedAt: string;
     EndedAt: string;
     OpeningScenario: OpeningScenario;
+    AssistantOpening: string;
     TurnCount: number;
     Messages: SessionMessage[];
     ConversationAnalysisTimeline: ConversationAnalysisTimelineItem[];
@@ -85,6 +108,7 @@ type ActiveConversationSession = {
   startedAt: string;
   endedAt: string | null;
   openingScenario: OpeningScenario;
+  assistantOpening: string;
   turnCount: number;
   messages: SessionMessage[];
   analysisTimeline: ConversationAnalysisTimelineItem[];
@@ -100,7 +124,7 @@ export type EndSessionResult = {
 function chooseOpeningScenario(): OpeningScenario {
   const index = Math.floor(Math.random() * openingScenarios.length);
 
-  return openingScenarios[index];
+  return { ...openingScenarios[index] };
 }
 
 function createMessage(
@@ -250,6 +274,7 @@ export class ConversationSessionRecorder {
       startedAt,
       endedAt: null,
       openingScenario: chooseOpeningScenario(),
+      assistantOpening: '',
       turnCount: 0,
       messages: [],
       analysisTimeline: [],
@@ -273,6 +298,7 @@ export class ConversationSessionRecorder {
       StartedAt: this.activeSession.startedAt,
       EndedAt: this.activeSession.endedAt,
       OpeningScenario: this.activeSession.openingScenario,
+      AssistantOpening: this.activeSession.assistantOpening,
       CurrentTurn: this.activeSession.turnCount,
       TurnCount: this.activeSession.turnCount,
       ConversationState: this.activeSession.conversationState,
@@ -298,6 +324,10 @@ export class ConversationSessionRecorder {
       this.activeSession.turnCount,
     );
     this.activeSession.messages.push(message);
+
+    if (this.activeSession.turnCount === 0) {
+      this.activeSession.assistantOpening = content;
+    }
 
     return message;
   }
@@ -378,6 +408,7 @@ export class ConversationSessionRecorder {
         StartedAt: session.startedAt,
         EndedAt: endedAt,
         OpeningScenario: session.openingScenario,
+        AssistantOpening: session.assistantOpening,
         TurnCount: session.turnCount,
         Messages: session.messages,
         ConversationAnalysisTimeline: session.analysisTimeline,

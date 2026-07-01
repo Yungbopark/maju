@@ -15,6 +15,12 @@ import {
 type PlaygroundTurn = Awaited<
   ReturnType<DevelopmentConversationTurnRunner['runTurn']>
 > & {
+  sessionId: string;
+  openingScenario: {
+    id: string;
+    category: string;
+  };
+  assistantOpening: string | null;
   conversationAnalysis: ConversationAnalysis | null;
   session: ConversationSessionSnapshot;
   closedSessionReportPath?: string | null;
@@ -23,9 +29,10 @@ type PlaygroundTurn = Awaited<
 @Injectable()
 export class DevelopmentPlaygroundService {
   private readonly openAIClient = new OpenAIClient();
+  private readonly toolRunner = new DevelopmentToolRunner();
   private readonly turnRunner = new DevelopmentConversationTurnRunner(
     this.openAIClient,
-    new DevelopmentToolRunner(),
+    this.toolRunner,
   );
   private readonly analyzer = new ConversationAnalyzer(this.openAIClient);
   private readonly sessionRecorder = new ConversationSessionRecorder();
@@ -41,15 +48,26 @@ export class DevelopmentPlaygroundService {
 
     this.previousResponseId = undefined;
     const session = this.sessionRecorder.startSession();
+    this.toolRunner.setOpeningScenario(session.OpeningScenario);
     const turn = await this.turnRunner.runTurn(
-      `Start the Maju conversation by calling startConversation. OpeningScenario: ${session.OpeningScenario}.`,
+      `Start the Maju conversation by calling startConversation. OpeningScenarioId: ${session.OpeningScenario.id}. OpeningScenarioCategory: ${session.OpeningScenario.category}.`,
     );
+    const assistantOpening = turn.toolResult.assistantOpening
+      ? String(turn.toolResult.assistantOpening)
+      : turn.assistantMessage;
     this.previousResponseId = turn.responseId;
-    this.sessionRecorder.appendAssistantMessage(turn.assistantMessage);
+    this.sessionRecorder.appendAssistantMessage(assistantOpening);
     this.sessionRecorder.setConversationState(turn.conversationState);
 
     return {
       ...turn,
+      assistantMessage: assistantOpening,
+      sessionId: session.SessionId,
+      openingScenario: {
+        id: session.OpeningScenario.id,
+        category: session.OpeningScenario.category,
+      },
+      assistantOpening,
       conversationAnalysis: null,
       session: this.sessionRecorder.getSessionSnapshot(),
       closedSessionReportPath,
@@ -78,11 +96,18 @@ export class DevelopmentPlaygroundService {
     this.sessionRecorder.appendAnalysis(userMessage.id, conversationAnalysis);
     this.sessionRecorder.appendAssistantMessage(turn.assistantMessage);
     this.sessionRecorder.setConversationState(turn.conversationState);
+    const currentSession = this.sessionRecorder.getSessionSnapshot();
 
     return {
       ...turn,
+      sessionId: currentSession.SessionId,
+      openingScenario: {
+        id: currentSession.OpeningScenario.id,
+        category: currentSession.OpeningScenario.category,
+      },
+      assistantOpening: currentSession.AssistantOpening || null,
       conversationAnalysis,
-      session: this.sessionRecorder.getSessionSnapshot(),
+      session: currentSession,
     };
   }
 
