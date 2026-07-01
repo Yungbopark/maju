@@ -52,22 +52,29 @@ export const CONVERSATION_ANALYZER_PROMPT = [
   'ProfileSignals and MemorySignals are candidates only. They must not imply saving, updating, or calling any downstream system.',
   'Use Unknown, empty arrays, or false when the evidence is insufficient.',
   'For housing price worry, use Category Housing, Topic HousePriceConcern, Emotion Concern, and MemorySignals.HousingConcern true.',
-  'For skipped meals, use Category Meal, Emotion Negative, and MemorySignals.MealSkipped true.',
+  'For skipped meals, use Category Meal, Topic SkippedMeal, Emotion Negative, and MemorySignals.MealSkipped true.',
   'For poor sleep, use Category Health, Topic Sleep, and MemorySignals.SleepIssue true.',
+  'For camping preference, use Category Hobby, Topic Camping, and ProfileSignals.Interests ["Camping"].',
 ].join('\n');
+
+const memorySignalCandidateSchema = z.object({
+  detected: z.boolean(),
+  confidence: z.number().min(0).max(1),
+});
 
 const profileSignalsSchema = z.object({
   Interests: z.array(z.string()),
   Lifestyle: z.array(z.string()),
-  Health: z.array(z.string()),
   ConversationStyle: z.array(z.string()),
+  Health: z.array(z.string()),
+  Occupation: z.array(z.string()),
 });
 
 const memorySignalsSchema = z.object({
-  HousingConcern: z.boolean(),
-  MealSkipped: z.boolean(),
-  SleepIssue: z.boolean(),
-  BackPain: z.boolean(),
+  MealSkipped: memorySignalCandidateSchema,
+  SleepIssue: memorySignalCandidateSchema,
+  HousingConcern: memorySignalCandidateSchema,
+  BackPain: memorySignalCandidateSchema,
   OtherSignals: z.array(z.string()),
 });
 
@@ -114,7 +121,7 @@ export const conversationAnalysisJsonSchema: Record<string, unknown> = {
     Topic: {
       type: 'string',
       description:
-        'Concise topic label such as HousePriceConcern, Moving, Mortgage, RegionSelection, Sleep, Lunch, or General.',
+        'Concise topic label such as HousePriceConcern, Moving, Mortgage, RegionSelection, SkippedMeal, Restaurant, Cooking, Sleep, Fatigue, BackPain, Camping, or General.',
     },
     Intent: {
       type: 'string',
@@ -139,7 +146,13 @@ export const conversationAnalysisJsonSchema: Record<string, unknown> = {
     ProfileSignals: {
       type: 'object',
       additionalProperties: false,
-      required: ['Interests', 'Lifestyle', 'Health', 'ConversationStyle'],
+      required: [
+        'Interests',
+        'Lifestyle',
+        'ConversationStyle',
+        'Health',
+        'Occupation',
+      ],
       properties: {
         Interests: {
           type: 'array',
@@ -149,11 +162,15 @@ export const conversationAnalysisJsonSchema: Record<string, unknown> = {
           type: 'array',
           items: { type: 'string' },
         },
+        ConversationStyle: {
+          type: 'array',
+          items: { type: 'string' },
+        },
         Health: {
           type: 'array',
           items: { type: 'string' },
         },
-        ConversationStyle: {
+        Occupation: {
           type: 'array',
           items: { type: 'string' },
         },
@@ -170,10 +187,42 @@ export const conversationAnalysisJsonSchema: Record<string, unknown> = {
         'OtherSignals',
       ],
       properties: {
-        HousingConcern: { type: 'boolean' },
-        MealSkipped: { type: 'boolean' },
-        SleepIssue: { type: 'boolean' },
-        BackPain: { type: 'boolean' },
+        MealSkipped: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['detected', 'confidence'],
+          properties: {
+            detected: { type: 'boolean' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+          },
+        },
+        SleepIssue: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['detected', 'confidence'],
+          properties: {
+            detected: { type: 'boolean' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+          },
+        },
+        HousingConcern: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['detected', 'confidence'],
+          properties: {
+            detected: { type: 'boolean' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+          },
+        },
+        BackPain: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['detected', 'confidence'],
+          properties: {
+            detected: { type: 'boolean' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 },
+          },
+        },
         OtherSignals: {
           type: 'array',
           items: { type: 'string' },
@@ -214,14 +263,15 @@ function createFallbackAnalysis(topic: string): ConversationAnalysis {
     ProfileSignals: {
       Interests: [],
       Lifestyle: [],
-      Health: [],
       ConversationStyle: [],
+      Health: [],
+      Occupation: [],
     },
     MemorySignals: {
-      HousingConcern: false,
-      MealSkipped: false,
-      SleepIssue: false,
-      BackPain: false,
+      MealSkipped: { detected: false, confidence: 0 },
+      SleepIssue: { detected: false, confidence: 0 },
+      HousingConcern: { detected: false, confidence: 0 },
+      BackPain: { detected: false, confidence: 0 },
       OtherSignals: [],
     },
   };
