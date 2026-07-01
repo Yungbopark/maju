@@ -311,6 +311,10 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             <pre id="conversationIntent">-</pre>
           </div>
           <div class="field">
+            <div class="label">Conversation Analysis</div>
+            <pre id="conversationAnalysis">{}</pre>
+          </div>
+          <div class="field">
             <div class="label">Next Action</div>
             <pre id="nextAction">-</pre>
           </div>
@@ -338,6 +342,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         assistantResponse: document.querySelector('#assistantResponse'),
         conversationState: document.querySelector('#conversationState'),
         conversationIntent: document.querySelector('#conversationIntent'),
+        conversationAnalysis: document.querySelector('#conversationAnalysis'),
         nextAction: document.querySelector('#nextAction'),
         rawTrace: document.querySelector('#rawTrace'),
       };
@@ -383,6 +388,9 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         debugFields.assistantResponse.textContent = payload.assistantMessage ?? '-';
         debugFields.conversationState.textContent = payload.conversationState ?? '-';
         debugFields.conversationIntent.textContent = payload.conversationIntent ?? '-';
+        debugFields.conversationAnalysis.textContent = formatJson(
+          payload.conversationAnalysis,
+        );
         debugFields.nextAction.textContent = payload.nextAction ?? '-';
         debugFields.rawTrace.textContent = formatJson(payload.rawTrace);
 

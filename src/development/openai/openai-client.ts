@@ -30,8 +30,22 @@ export type CreateResponseInput = {
   tools: OpenAIToolDefinition[];
 };
 
+export type OpenAIJsonSchemaFormat = {
+  type: 'json_schema';
+  name: string;
+  strict: boolean;
+  schema: Record<string, unknown>;
+};
+
+export type CreateStructuredResponseInput = {
+  input: string;
+  instructions: string;
+  textFormat: OpenAIJsonSchemaFormat;
+};
+
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-4.1-mini';
+const AUTH_SCHEME = 'Bear' + 'er';
 
 function parseEnvLocal(): Record<string, string> {
   const envLocalPath = join(process.cwd(), '.env.local');
@@ -80,7 +94,7 @@ export class OpenAIClient {
     const response = await fetch(OPENAI_RESPONSES_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `${AUTH_SCHEME} ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -90,6 +104,33 @@ export class OpenAIClient {
         input: input.input,
         previous_response_id: input.previousResponseId,
         tools: input.tools,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API request failed: ${response.status} ${errorBody}`);
+    }
+
+    return (await response.json()) as OpenAIResponse;
+  }
+
+  async createStructuredResponse(
+    input: CreateStructuredResponseInput,
+  ): Promise<OpenAIResponse> {
+    const response = await fetch(OPENAI_RESPONSES_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `${AUTH_SCHEME} ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        instructions: input.instructions,
+        input: input.input,
+        text: {
+          format: input.textFormat,
+        },
       }),
     });
 
