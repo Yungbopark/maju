@@ -27,4 +27,9 @@ export class DevelopmentPlaygroundController {
   async continueConversation(@Body() body: PlaygroundMessageBody) {
     return this.playgroundService.continueConversation(body.message ?? '');
   }
+
+  @Post('end')
+  async endConversationSession() {
+    return this.playgroundService.endConversationSession();
+  }
 }

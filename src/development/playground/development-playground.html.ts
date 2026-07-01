@@ -34,12 +34,13 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
       .shell {
         display: grid;
-        grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.9fr);
+        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.55fr) minmax(360px, 0.9fr);
         height: 100vh;
         overflow: hidden;
       }
 
       .chat,
+      .session,
       .debug {
         height: 100vh;
         min-width: 0;
@@ -51,6 +52,16 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         grid-template-rows: auto 1fr auto;
         gap: 16px;
         border-right: 1px solid var(--border);
+      }
+
+      .session {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 16px;
+        background: #fbfcfd;
+        border-right: 1px solid var(--border);
+        min-height: 0;
+        overflow: hidden;
       }
 
       .header {
@@ -100,6 +111,23 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       button:disabled {
         cursor: not-allowed;
         opacity: 0.55;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      button.secondary {
+        background: white;
+        border-color: var(--border);
+        color: var(--text);
+      }
+
+      button.secondary:hover {
+        background: #f1f4f8;
       }
 
       .messages {
@@ -199,7 +227,8 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         color: var(--accent-strong);
       }
 
-      .debug-grid {
+      .debug-grid,
+      .session-grid {
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
@@ -247,6 +276,12 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
           border-top: 1px solid var(--border);
           height: 35vh;
         }
+
+        .session {
+          border-right: 0;
+          border-top: 1px solid var(--border);
+          height: 40vh;
+        }
       }
     </style>
   </head>
@@ -258,7 +293,10 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             <h1>Maju Conversation Playground</h1>
             <div class="subtitle">Development harness using OpenAI Function Calling</div>
           </div>
-          <button id="startButton" type="button">대화 시작</button>
+          <div class="actions">
+            <button id="startButton" type="button">대화 시작</button>
+            <button id="endButton" class="secondary" type="button">종료</button>
+          </div>
         </div>
 
         <div id="messages" class="messages" aria-live="polite"></div>
@@ -272,6 +310,48 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
           <button id="sendButton" type="submit">전송</button>
         </form>
       </section>
+
+      <aside class="session" data-selection-region="session" tabindex="-1">
+        <div>
+          <h2>Session</h2>
+          <div id="sessionStatus" class="subtitle">No active session</div>
+        </div>
+
+        <div id="sessionContent" class="session-grid">
+          <div class="field">
+            <div class="label">SessionId</div>
+            <pre id="sessionId">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">OpeningScenario</div>
+            <pre id="openingScenario">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">Current Turn</div>
+            <pre id="currentTurn">0</pre>
+          </div>
+          <div class="field">
+            <div class="label">Started At</div>
+            <pre id="startedAt">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">Turn Count</div>
+            <pre id="turnCount">0</pre>
+          </div>
+          <div class="field">
+            <div class="label">Conversation State</div>
+            <pre id="sessionConversationState">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">Conversation Summary</div>
+            <pre id="conversationSummary">{}</pre>
+          </div>
+          <div class="field">
+            <div class="label">Last Report Path</div>
+            <pre id="lastReportPath">-</pre>
+          </div>
+        </div>
+      </aside>
 
       <aside class="debug" data-selection-region="debug" tabindex="-1">
         <div>
@@ -329,10 +409,12 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
     <script>
       const messages = document.querySelector('#messages');
       const startButton = document.querySelector('#startButton');
+      const endButton = document.querySelector('#endButton');
       const sendButton = document.querySelector('#sendButton');
       const composer = document.querySelector('#composer');
       const messageInput = document.querySelector('#messageInput');
       const status = document.querySelector('#status');
+      const sessionStatus = document.querySelector('#sessionStatus');
       let activeSelectionRegion = 'chat';
 
       const debugFields = {
@@ -345,6 +427,19 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         conversationAnalysis: document.querySelector('#conversationAnalysis'),
         nextAction: document.querySelector('#nextAction'),
         rawTrace: document.querySelector('#rawTrace'),
+      };
+
+      const sessionFields = {
+        sessionId: document.querySelector('#sessionId'),
+        openingScenario: document.querySelector('#openingScenario'),
+        currentTurn: document.querySelector('#currentTurn'),
+        startedAt: document.querySelector('#startedAt'),
+        turnCount: document.querySelector('#turnCount'),
+        sessionConversationState: document.querySelector(
+          '#sessionConversationState',
+        ),
+        conversationSummary: document.querySelector('#conversationSummary'),
+        lastReportPath: document.querySelector('#lastReportPath'),
       };
 
       function nowLabel() {
@@ -375,6 +470,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
       function setLoading(isLoading) {
         startButton.disabled = isLoading;
+        endButton.disabled = isLoading;
         sendButton.disabled = isLoading;
         messageInput.disabled = isLoading;
         status.textContent = isLoading ? 'Running OpenAI function call...' : 'Ready';
@@ -400,6 +496,29 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             node.dataset.state === payload.conversationState,
           );
         });
+      }
+
+      function setSession(session, reportPath) {
+        if (!session) {
+          sessionStatus.textContent = 'No active session';
+          return;
+        }
+
+        sessionStatus.textContent = session.EndedAt ? 'Ended' : 'Active';
+        sessionFields.sessionId.textContent = session.SessionId ?? '-';
+        sessionFields.openingScenario.textContent = session.OpeningScenario ?? '-';
+        sessionFields.currentTurn.textContent = String(session.CurrentTurn ?? 0);
+        sessionFields.startedAt.textContent = session.StartedAt ?? '-';
+        sessionFields.turnCount.textContent = String(session.TurnCount ?? 0);
+        sessionFields.sessionConversationState.textContent =
+          session.ConversationState ?? '-';
+        sessionFields.conversationSummary.textContent = formatJson(
+          session.ConversationSummary,
+        );
+
+        if (reportPath) {
+          sessionFields.lastReportPath.textContent = reportPath;
+        }
       }
 
       function selectElementContents(element) {
@@ -438,8 +557,10 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
         try {
           const payload = await postJson('/development/playground/start');
+          messages.replaceChildren();
           appendMessage('assistant', payload.assistantMessage);
           setDebug(payload);
+          setSession(payload.session, payload.closedSessionReportPath);
         } catch (error) {
           status.textContent = error.message;
           status.classList.add('error');
@@ -458,6 +579,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
           });
           appendMessage('assistant', payload.assistantMessage);
           setDebug(payload);
+          setSession(payload.session);
         } catch (error) {
           status.textContent = error.message;
           status.classList.add('error');
@@ -468,6 +590,27 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
       startButton.addEventListener('click', () => {
         runStart();
+      });
+
+      async function runEnd() {
+        setLoading(true);
+
+        try {
+          const payload = await postJson('/development/playground/end');
+          setSession(payload.session, payload.reportPath);
+          status.textContent = payload.reportPath
+            ? 'Session report saved'
+            : 'No active session';
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add('error');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      endButton.addEventListener('click', () => {
+        runEnd();
       });
 
       document.querySelectorAll('[data-selection-region]').forEach((region) => {
@@ -493,6 +636,11 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
         if (activeSelectionRegion === 'debug') {
           selectElementContents(document.querySelector('#debugContent'));
+          return;
+        }
+
+        if (activeSelectionRegion === 'session') {
+          selectElementContents(document.querySelector('#sessionContent'));
           return;
         }
 
