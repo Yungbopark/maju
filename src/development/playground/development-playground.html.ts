@@ -295,6 +295,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
           </div>
           <div class="actions">
             <button id="startButton" type="button">대화 시작</button>
+            <button id="focusButton" class="secondary" type="button">Focus 실험</button>
             <button id="endButton" class="secondary" type="button">종료</button>
           </div>
         </div>
@@ -403,6 +404,26 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             <pre id="conversationAnalysis">{}</pre>
           </div>
           <div class="field">
+            <div class="label">Current Focus</div>
+            <pre id="currentFocus">{}</pre>
+          </div>
+          <div class="field">
+            <div class="label">Remaining User Turns</div>
+            <pre id="remainingUserTurns">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">Generated System Prompt</div>
+            <pre id="generatedSystemPrompt">-</pre>
+          </div>
+          <div class="field">
+            <div class="label">OpenAI Response</div>
+            <pre id="openAIResponse">{}</pre>
+          </div>
+          <div class="field">
+            <div class="label">Focus Evaluation</div>
+            <pre id="focusEvaluation">{}</pre>
+          </div>
+          <div class="field">
             <div class="label">Next Action</div>
             <pre id="nextAction">-</pre>
           </div>
@@ -417,6 +438,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
     <script>
       const messages = document.querySelector('#messages');
       const startButton = document.querySelector('#startButton');
+      const focusButton = document.querySelector('#focusButton');
       const endButton = document.querySelector('#endButton');
       const sendButton = document.querySelector('#sendButton');
       const composer = document.querySelector('#composer');
@@ -424,6 +446,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       const status = document.querySelector('#status');
       const sessionStatus = document.querySelector('#sessionStatus');
       let activeSelectionRegion = 'chat';
+      let playgroundMode = 'conversation';
 
       const debugFields = {
         selectedTool: document.querySelector('#selectedTool'),
@@ -433,6 +456,11 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         conversationState: document.querySelector('#conversationState'),
         conversationIntent: document.querySelector('#conversationIntent'),
         conversationAnalysis: document.querySelector('#conversationAnalysis'),
+        currentFocus: document.querySelector('#currentFocus'),
+        remainingUserTurns: document.querySelector('#remainingUserTurns'),
+        generatedSystemPrompt: document.querySelector('#generatedSystemPrompt'),
+        openAIResponse: document.querySelector('#openAIResponse'),
+        focusEvaluation: document.querySelector('#focusEvaluation'),
         nextAction: document.querySelector('#nextAction'),
         rawTrace: document.querySelector('#rawTrace'),
       };
@@ -480,6 +508,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
       function setLoading(isLoading) {
         startButton.disabled = isLoading;
+        focusButton.disabled = isLoading;
         endButton.disabled = isLoading;
         sendButton.disabled = isLoading;
         messageInput.disabled = isLoading;
@@ -506,6 +535,27 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
             node.dataset.state === payload.conversationState,
           );
         });
+      }
+
+      function setFocusDebug(payload) {
+        debugFields.selectedTool.textContent = 'focusContinuityExperiment';
+        debugFields.toolArguments.textContent = '{}';
+        debugFields.toolResult.textContent = formatJson(payload);
+        debugFields.assistantResponse.textContent =
+          payload.assistantResponse ?? '-';
+        debugFields.conversationState.textContent = 'FOCUS_CONTINUITY';
+        debugFields.conversationIntent.textContent = 'FOLLOW_UP_VALIDATION';
+        debugFields.conversationAnalysis.textContent = '{}';
+        debugFields.currentFocus.textContent = formatJson(payload.currentFocus);
+        debugFields.remainingUserTurns.textContent = String(
+          payload.remainingUserTurns ?? '-',
+        );
+        debugFields.generatedSystemPrompt.textContent =
+          payload.generatedSystemPrompt ?? '-';
+        debugFields.openAIResponse.textContent = formatJson(payload.openAIResponse);
+        debugFields.focusEvaluation.textContent = formatJson(payload.evaluation);
+        debugFields.nextAction.textContent = 'WAIT_USER_RESPONSE';
+        debugFields.rawTrace.textContent = formatJson(payload);
       }
 
       function setSession(session, reportPath) {
@@ -568,6 +618,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       }
 
       async function runStart() {
+        playgroundMode = 'conversation';
         setLoading(true);
 
         try {
@@ -605,6 +656,50 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
       startButton.addEventListener('click', () => {
         runStart();
+      });
+
+      async function runFocusStart() {
+        playgroundMode = 'focus';
+        setLoading(true);
+
+        try {
+          const payload = await postJson('/development/playground/focus/start');
+          messages.replaceChildren();
+          appendMessage('assistant', payload.assistantResponse);
+          setFocusDebug(payload);
+          status.textContent = 'Focus continuity experiment running';
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add('error');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function runFocusMessage(message) {
+        appendMessage('user', message);
+        setLoading(true);
+
+        try {
+          const payload = await postJson('/development/playground/focus/message', {
+            message,
+          });
+          appendMessage('assistant', payload.assistantResponse);
+          setFocusDebug(payload);
+          status.textContent =
+            payload.remainingUserTurns === 0
+              ? 'Focus validation reached 5 user turns'
+              : 'Focus continuity experiment running';
+        } catch (error) {
+          status.textContent = error.message;
+          status.classList.add('error');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      focusButton.addEventListener('click', () => {
+        runFocusStart();
       });
 
       async function runEnd() {
@@ -671,6 +766,12 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         }
 
         messageInput.value = '';
+
+        if (playgroundMode === 'focus') {
+          runFocusMessage(message);
+          return;
+        }
+
         runMessage(message);
       });
 

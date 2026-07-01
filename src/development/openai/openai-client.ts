@@ -43,6 +43,12 @@ export type CreateStructuredResponseInput = {
   textFormat: OpenAIJsonSchemaFormat;
 };
 
+export type CreateTextResponseInput = {
+  input: string | Array<Record<string, unknown>>;
+  instructions: string;
+  previousResponseId?: string;
+};
+
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-4.1-mini';
 const AUTH_SCHEME = 'Bear' + 'er';
@@ -131,6 +137,31 @@ export class OpenAIClient {
         text: {
           format: input.textFormat,
         },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API request failed: ${response.status} ${errorBody}`);
+    }
+
+    return (await response.json()) as OpenAIResponse;
+  }
+
+  async createTextResponse(
+    input: CreateTextResponseInput,
+  ): Promise<OpenAIResponse> {
+    const response = await fetch(OPENAI_RESPONSES_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `${AUTH_SCHEME} ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        instructions: input.instructions,
+        input: input.input,
+        previous_response_id: input.previousResponseId,
       }),
     });
 

@@ -32,4 +32,16 @@ export class DevelopmentPlaygroundController {
   async endConversationSession() {
     return this.playgroundService.endConversationSession();
   }
+
+  @Post('focus/start')
+  async startFocusContinuityExperiment() {
+    return this.playgroundService.startFocusContinuityExperiment();
+  }
+
+  @Post('focus/message')
+  async continueFocusContinuityExperiment(@Body() body: PlaygroundMessageBody) {
+    return this.playgroundService.continueFocusContinuityExperiment(
+      body.message ?? '',
+    );
+  }
 }

@@ -4,6 +4,7 @@ import {
   ConversationAnalyzer,
 } from '../openai/conversation-analyzer';
 import { DevelopmentConversationTurnRunner } from '../openai/conversation-turn-runner';
+import { FocusContinuityExperiment } from '../openai/focus-continuity-experiment';
 import { OpenAIClient } from '../openai/openai-client';
 import { DevelopmentToolRunner } from '../openai/tool-runner';
 import {
@@ -35,6 +36,9 @@ export class DevelopmentPlaygroundService {
     this.toolRunner,
   );
   private readonly analyzer = new ConversationAnalyzer(this.openAIClient);
+  private readonly focusExperiment = new FocusContinuityExperiment(
+    this.openAIClient,
+  );
   private readonly sessionRecorder = new ConversationSessionRecorder();
   private previousResponseId?: string;
 
@@ -115,5 +119,13 @@ export class DevelopmentPlaygroundService {
     this.previousResponseId = undefined;
 
     return this.sessionRecorder.endSession();
+  }
+
+  startFocusContinuityExperiment() {
+    return this.focusExperiment.start();
+  }
+
+  continueFocusContinuityExperiment(message: string) {
+    return this.focusExperiment.continue(message);
   }
 }
