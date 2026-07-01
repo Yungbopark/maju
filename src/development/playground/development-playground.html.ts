@@ -35,11 +35,13 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       .shell {
         display: grid;
         grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.9fr);
-        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
       }
 
       .chat,
       .debug {
+        height: 100vh;
         min-width: 0;
         padding: 24px;
       }
@@ -104,6 +106,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         display: flex;
         flex-direction: column;
         gap: 12px;
+        min-height: 0;
         overflow: auto;
         padding: 4px 4px 12px;
       }
@@ -169,6 +172,8 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         grid-template-rows: auto auto 1fr;
         gap: 16px;
         background: var(--panel);
+        min-height: 0;
+        overflow: hidden;
       }
 
       .timeline {
@@ -198,7 +203,9 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
+        min-height: 0;
         overflow: auto;
+        padding-right: 4px;
       }
 
       .field {
@@ -233,18 +240,19 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
         .chat {
           border-right: 0;
-          min-height: 65vh;
+          height: 65vh;
         }
 
         .debug {
           border-top: 1px solid var(--border);
+          height: 35vh;
         }
       }
     </style>
   </head>
   <body>
     <main class="shell">
-      <section class="chat">
+      <section class="chat" data-selection-region="chat" tabindex="-1">
         <div class="header">
           <div>
             <h1>Maju Conversation Playground</h1>
@@ -265,7 +273,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         </form>
       </section>
 
-      <aside class="debug">
+      <aside class="debug" data-selection-region="debug" tabindex="-1">
         <div>
           <h2>Debug Panel</h2>
           <div id="status" class="subtitle">Ready</div>
@@ -277,7 +285,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
           <div class="state" data-state="CARE_SUGGESTION">CARE_SUGGESTION</div>
         </div>
 
-        <div class="debug-grid">
+        <div id="debugContent" class="debug-grid">
           <div class="field">
             <div class="label">Selected Tool</div>
             <pre id="selectedTool">-</pre>
@@ -321,6 +329,7 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
       const composer = document.querySelector('#composer');
       const messageInput = document.querySelector('#messageInput');
       const status = document.querySelector('#status');
+      let activeSelectionRegion = 'chat';
 
       const debugFields = {
         selectedTool: document.querySelector('#selectedTool'),
@@ -385,6 +394,23 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         });
       }
 
+      function selectElementContents(element) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+
+        range.selectNodeContents(element);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      function isTextInput(element) {
+        return (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element?.isContentEditable
+        );
+      }
+
       async function postJson(url, body) {
         const response = await fetch(url, {
           method: 'POST',
@@ -436,6 +462,35 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
         runStart();
       });
 
+      document.querySelectorAll('[data-selection-region]').forEach((region) => {
+        region.addEventListener('pointerdown', () => {
+          activeSelectionRegion = region.dataset.selectionRegion;
+        });
+
+        region.addEventListener('focusin', () => {
+          activeSelectionRegion = region.dataset.selectionRegion;
+        });
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'a') {
+          return;
+        }
+
+        if (isTextInput(document.activeElement)) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (activeSelectionRegion === 'debug') {
+          selectElementContents(document.querySelector('#debugContent'));
+          return;
+        }
+
+        selectElementContents(messages);
+      });
+
       composer.addEventListener('submit', (event) => {
         event.preventDefault();
         const message = messageInput.value.trim();
@@ -446,6 +501,20 @@ export const developmentPlaygroundHtml = String.raw`<!doctype html>
 
         messageInput.value = '';
         runMessage(message);
+      });
+
+      messageInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (sendButton.disabled) {
+          return;
+        }
+
+        composer.requestSubmit();
       });
     </script>
   </body>
